@@ -85,10 +85,7 @@ function createPost(author, content) {
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
 
-    // この下の行を消して、投稿処理を記述
-    console.log('ボタンが押されました')
-    // この上の行を消して投稿処理を記述
-    // 行末に 「;」 を付けないこと
+    postsRef.push(postData)
     .then(() => {
         showMessage('投稿が完了しました！');
         $('#authorInput').val('');
@@ -142,6 +139,71 @@ function createPostElement(post) {
     `;
 }
 
+// 投稿リストを表示
+function displayPosts(posts) {
+    const postsList = $('#postsList');
+    postsList.empty();
+
+    if (posts.length === 0) {
+        postsList.html('<div class="no-posts">まだ投稿がありません。</div>');
+        return;
+    }
+
+    posts.forEach(post => {
+        postsList.append(createPostElement(post));
+    });
+}
+
+// 投稿データを取得して表示
+function loadPosts() {
+    const postsList = $('#postsList');
+    postsList.html('<div class="loading">投稿を読み込み中...</div>');
+
+    postsRef.orderByChild('timestamp').once('value')
+        .then((snapshot) => {
+            const posts = [];
+            snapshot.forEach((childSnapshot) => {
+                const post = {
+                    id: childSnapshot.key,
+                    ...childSnapshot.val()
+                };
+                posts.push(post);
+            });
+            // タイムスタンプで降順ソート（新しい順）
+            posts.sort((a, b) => b.timestamp - a.timestamp);
+            displayPosts(posts);
+        })
+        .catch((error) => {
+            console.error('Error loading posts:', error);
+            showMessage('投稿の読み込みに失敗しました', 'error');
+            postsList.html('<div class="error">投稿の読み込みに失敗しました。</div>');
+        });
+}
+
+// リアルタイムリスナーの設定
+function setupRealtimeListener() {
+    if (postsListener) {
+        postsRef.off('child_added', postsListener);
+    }
+
+    postsListener = postsRef.on('child_added', (snapshot) => {
+        const newPost = {
+            id: snapshot.key,
+            ...snapshot.val()
+        };
+
+        // 新しい投稿を先頭に追加
+        const postsList = $('#postsList');
+        const noPostsElement = postsList.find('.no-posts');
+
+        if (noPostsElement.length > 0) {
+            postsList.empty();
+        }
+
+        postsList.prepend(createPostElement(newPost));
+    });
+}
+
 
 $(function() {
     // Firebaseの初期化
@@ -149,6 +211,13 @@ $(function() {
         firebase.initializeApp(firebaseConfig);
         console.log("Firebase initialized successfully");
         postsRef = firebase.database().ref('posts');
+
+        // 投稿データの読み込み
+        loadPosts();
+
+        // リアルタイムリスナーの設定
+        setupRealtimeListener();
+
     } catch (error) {
         console.error("Firebase initialization error:", error);
         showMessage('Firebaseの初期化に失敗しました', 'error');
@@ -199,6 +268,14 @@ $(function() {
             </div>
             <div class="button-group">
                 <button id="postButton" class="btn-primary">投稿する</button>
+            </div>
+        </div>
+
+        <!-- 投稿リスト -->
+        <div class="posts-container">
+            <h2>投稿一覧</h2>
+            <div id="postsList" class="posts-list">
+                <div class="loading">投稿を読み込み中...</div>
             </div>
         </div>
     </div>

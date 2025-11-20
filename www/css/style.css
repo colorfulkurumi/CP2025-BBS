@@ -122,6 +122,77 @@ textarea.form-control {
     cursor: not-allowed;
 }
 
+/* 投稿リスト */
+.posts-container {
+    margin-top: 30px;
+}
+
+.posts-container h2 {
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+}
+
+.posts-list {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.loading, .no-posts, .error {
+    padding: 40px;
+    text-align: center;
+    color: #6c757d;
+}
+
+.error {
+    color: #dc3545;
+}
+
+/* 個別投稿 */
+.post {
+    border-bottom: 1px solid #e9ecef;
+    padding: 20px;
+    transition: background-color 0.2s;
+}
+
+.post:last-child {
+    border-bottom: none;
+}
+
+.post:hover {
+    background-color: #f8f9fa;
+}
+
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.post-author {
+    font-weight: 600;
+    color: #495057;
+    font-size: 16px;
+}
+
+.post-time {
+    color: #6c757d;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.post-content {
+    color: #333;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
 /* アニメーション */
 @keyframes fadeIn {
     from {
@@ -132,4 +203,8 @@ textarea.form-control {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+.post {
+    animation: fadeIn 0.3s ease-in-out;
 }
