@@ -146,7 +146,7 @@ function createPostElement(post) {
             </div>
             <div class="post-content">${escapeHtml(post.content)}</div>
             <div class="edit-form">
-                <textarea class="form-control" id="edit-${post.id}"></textarea>
+                <textarea class="form-control" id="edit-${post.id}">${escapeHtml(post.content)}</textarea>
                 <div class="button-group">
                     <button class="btn-primary" onclick="updatePost('${post.id}')">
                         更新
@@ -213,7 +213,7 @@ function loadPosts() {
                 posts.sort((a, b) => a.timestamp - b.timestamp);
             }
 
-        renderPosts(posts);
+        displayPosts(posts);
         $('#loadingSpinner').hide();
     }, (error) => {
         console.error('Data fetch error:', error);
@@ -248,7 +248,7 @@ function updatePost(postId) {
         updatedAt: firebase.database.ServerValue.TIMESTAMP
     };
 
-    postsRef.child(postId).remove()
+    postsRef.child(postId).update(updates)
     .then(() => {
         showMessage('投稿を更新しました');
         $(`#post-${postId}`).removeClass('editing');
@@ -268,7 +268,7 @@ function deletePost(postId) {
     const postElement = $(`#post-${postId}`);
     postElement.addClass('deleting');
 
-    postsRef.child(postId).update({content: '削除されました'})
+    postsRef.child(postId).remove()
     .then(() => {
         showMessage('投稿を削除しました');
     })
@@ -297,9 +297,6 @@ $(function() {
         // 投稿データの読み込み
         loadPosts();
 
-        // リアルタイムリスナーの設定
-        setupRealtimeListener();
-
     } catch (error) {
         console.error("Firebase initialization error:", error);
         showMessage('Firebaseの初期化に失敗しました', 'error');
@@ -319,9 +316,6 @@ $(function() {
 
     // 投稿一覧表示順序選択
     $('#sortOrder').on('change', loadPosts);
-
-    // 投稿一覧の初期読み込み
-    loadPosts();
 });
 
 // クリーンアップ処理
