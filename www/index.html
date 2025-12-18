@@ -191,9 +191,10 @@
                 relativeTime = `${diffHours}時間前`;
             } else if (diffDays < 7) {
                 relativeTime = `${diffDays}日前`;
-            } else if (diffWeeks < 4) {
+            } else if (diffMonths < 1) {
+                // 1ヶ月未満は週で表示
                 relativeTime = `${diffWeeks}週間前`;
-            } else if (diffMonths < 12) {
+            } else if (diffYears < 1) {
                 relativeTime = `${diffMonths}ヶ月前`;
             } else {
                 relativeTime = `${diffYears}年前`;
