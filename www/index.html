@@ -324,14 +324,29 @@
             const content = $('#editContent').val();
             if (!validateContent(content)) return;
 
+            // 現在のdisplayNameを取得
+            const currentDisplayName = currentUser ? (currentUser.displayName || currentUser.email) : null;
+
             const updates = {
                 content: content,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             };
 
-            postsRef.child(currentEditId).update(updates)
+            // 投稿の現在の作者名を取得して比較
+            postsRef.child(currentEditId).once('value')
+                .then((snapshot) => {
+                    const postData = snapshot.val();
+
+                    // 作者名が現在のdisplayNameと異なる場合は更新
+                    if (postData && postData.author !== currentDisplayName) {
+                        updates.author = currentDisplayName;
+                    }
+
+                    return postsRef.child(currentEditId).update(updates);
+                })
                 .then(() => {
-                    showMessage('投稿を更新しました');
+                    const nameUpdated = updates.author ? '（表示名も更新されました）' : '';
+                    showMessage(`投稿を更新しました${nameUpdated}`);
                     closeModal('editModal');
                     animateUpdate(currentEditId);
                     currentEditId = null;
