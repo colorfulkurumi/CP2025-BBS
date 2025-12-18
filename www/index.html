@@ -559,13 +559,11 @@
 
             function applyTheme(index) {
                 const theme = themes[index];
-                document.body.style.backgroundColor = theme.bg;
-                document.body.style.color = theme.text;
 
-                // カード背景を更新
-                document.querySelectorAll('.post, .auth-container, .post-form, .user-info, .modal-content').forEach(el => {
-                    el.style.backgroundColor = theme.card;
-                });
+                // CSSカスタムプロパティを使用してテーマを適用
+                document.documentElement.style.setProperty('--theme-bg', theme.bg);
+                document.documentElement.style.setProperty('--theme-text', theme.text);
+                document.documentElement.style.setProperty('--theme-card', theme.card);
 
                 // ダークテーマの場合は追加スタイル
                 if (theme.name === 'dark') {
