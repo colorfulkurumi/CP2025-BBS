@@ -34,10 +34,14 @@
         </div>
     `);
 
-            // 3秒後にメッセージを消す
+            // 4秒後にフェードアウトしてメッセージを消す
             setTimeout(() => {
-                messageArea.empty();
-            }, 3000);
+                messageArea.find('.message').addClass('fade-out');
+                // フェードアウトアニメーション完了後に要素を削除
+                setTimeout(() => {
+                    messageArea.empty();
+                }, 300);
+            }, 4000);
         }
 
         // 認証エラーメッセージの日本語化

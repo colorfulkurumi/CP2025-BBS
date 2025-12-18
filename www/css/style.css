@@ -38,6 +38,12 @@ h1 {
     border-radius: 4px;
     margin-bottom: 15px;
     animation: fadeIn 0.3s ease-in-out;
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.message.fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
 }
 
 .message.success {
