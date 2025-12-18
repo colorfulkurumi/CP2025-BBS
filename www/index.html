@@ -1,9 +1,11 @@
 <!DOCTYPE HTML>
 <html>
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: content: https://ssl.gstatic.com; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src * data: gap: content: https://ssl.gstatic.com; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'">
     <script src="cordova.js"></script>
     <script src="components/loader.js"></script>
     <link rel="stylesheet" href="components/loader.css">
@@ -16,155 +18,196 @@
     <script src="config.js"></script>
 
     <script>
-let postsRef;
-let postsListener = null;
-// 現在の編集対象のID
-let currentEditId = null;
-// ログイン中のユーザ
-let currentUser = null;
+        let postsRef;
+        let postsListener = null;
+        // 現在の編集対象のID
+        let currentEditId = null;
+        // ログイン中のユーザ
+        let currentUser = null;
 
-// メッセージ表示処理
-function showMessage(message, type = 'success') {
-    const messageArea = $('#messageArea');
-    messageArea.html(`
+        // メッセージ表示処理
+        function showMessage(message, type = 'success') {
+            const messageArea = $('#messageArea');
+            messageArea.html(`
         <div class="message ${type}">
             ${message}
         </div>
     `);
 
-    // 3秒後にメッセージを消す
-    setTimeout(() => {
-        messageArea.empty();
-    }, 3000);
-}
-
-// 認証エラーメッセージの日本語化
-function getAuthErrorMessage(error) {
-    // エラーコードがある場合
-    if (error.code) {
-        return `認証エラーが発生しました（${error.code}）`;
-    } else if (error.message) {
-        return `エラーが発生しました：${error.message}`;
-    } else {
-        return 'エラーが発生しました';
-    }
-}
-
-// 文字数カウントの更新
-function updateCharacterCount(inputId, counterId, maxLength) {
-    const input = $(`#${inputId}`);
-    const counter = $(`#${counterId}`);
-
-    input.on('input', () => {
-        const length = input.val().length;
-        counter.text(`${length}/${maxLength}`);
-
-        if (length > maxLength) {
-            counter.addClass('error');
-        } else {
-            counter.removeClass('error');
+            // 3秒後にメッセージを消す
+            setTimeout(() => {
+                messageArea.empty();
+            }, 3000);
         }
-    });
-}
 
-// 投稿内容のバリデーション
-function validateContent(content) {
-    if (!content || !content.trim()) {
-        showMessage('投稿内容を入力してください', 'error');
-        return false;
-    }
-    if (content.length > 1000) {
-        showMessage('投稿内容は1000文字以内で入力してください', 'error');
-        return false;
-    }
-    return true;
-}
+        // 認証エラーメッセージの日本語化
+        function getAuthErrorMessage(error) {
+            // エラーコードがある場合
+            if (error.code) {
+                return `認証エラーが発生しました（${error.code}）`;
+            } else if (error.message) {
+                return `エラーが発生しました：${error.message}`;
+            } else {
+                return 'エラーが発生しました';
+            }
+        }
 
-// 認証フォームのバリデーション
-function validateAuthInput(email, password, isRegister = false) {
-    if (!email || !email.trim()) {
-        showMessage('メールアドレスを入力してください', 'error');
-        return false;
-    }
-    if (!password || !password.trim()) {
-        showMessage('パスワードを入力してください', 'error');
-        return false;
-    }
-    if (isRegister && password.length < 6) {
-        showMessage('パスワードは6文字以上にしてください', 'error');
-        return false;
-    }
-    return true;
-}
+        // 文字数カウントの更新（残り文字数表示）
+        function updateCharacterCount(inputId, counterId, maxLength) {
+            const input = $(`#${inputId}`);
+            const counter = $(`#${counterId}`);
 
-// 投稿処理
-function createPost(author, content) {
-    if (!currentUser) {
-        showMessage('投稿するにはログインが必要です', 'error');
-        return;
-    }
+            // 初期表示の更新
+            const updateCounter = () => {
+                const length = input.val().length;
+                const remaining = maxLength - length;
+                counter.text(`残り ${remaining} 文字`);
 
-    if (!validateContent(content)) return;
+                if (remaining < 0) {
+                    counter.addClass('error');
+                } else if (remaining <= 100) {
+                    counter.removeClass('error').addClass('warning');
+                } else {
+                    counter.removeClass('error warning');
+                }
+            };
 
-    const button = $('#postButton');
-    button.prop('disabled', true);
+            // 初期状態を設定
+            updateCounter();
 
-    // author はログインしているユーザのメールアドレスに変更、userId を追加
-    const postData = {
-        author: currentUser.email,
-        content: content,
-        timestamp: firebase.database.ServerValue.TIMESTAMP,
-        userId: currentUser.uid
-    };
+            // 入力イベントにバインド
+            input.off('input').on('input', updateCounter);
+        }
 
-    postsRef.push(postData)
-    .then(() => {
-        showMessage('投稿が完了しました！');
-        $('#contentInput').val('');
-        updateCharacterCount('contentInput', 'contentCount', 1000);
-    })
-    .catch((error) => {
-        showMessage('投稿に失敗しました：' + error.message, 'error');
-    })
-    .finally(() => {
-        button.prop('disabled', false);
-    });
-}
+        // 投稿内容のバリデーション
+        function validateContent(content) {
+            if (!content || !content.trim()) {
+                showMessage('投稿内容を入力してください', 'error');
+                return false;
+            }
+            if (content.length > 1000) {
+                showMessage('投稿内容は1000文字以内で入力してください', 'error');
+                return false;
+            }
+            return true;
+        }
 
-// HTMLエスケープ処理
-function escapeHtml(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
+        // 認証フォームのバリデーション
+        function validateAuthInput(email, password, isRegister = false) {
+            if (!email || !email.trim()) {
+                showMessage('メールアドレスを入力してください', 'error');
+                return false;
+            }
+            if (!password || !password.trim()) {
+                showMessage('パスワードを入力してください', 'error');
+                return false;
+            }
+            if (isRegister && password.length < 6) {
+                showMessage('パスワードは6文字以上にしてください', 'error');
+                return false;
+            }
+            return true;
+        }
 
-// タイムスタンプのフォーマット
-function formatTimestamp(timestamp) {
-    const date = new Date(timestamp);
-    return date.toLocaleString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
+        // 投稿処理
+        function createPost(author, content) {
+            if (!currentUser) {
+                showMessage('投稿するにはログインが必要です', 'error');
+                return;
+            }
 
-// 投稿の編集権限チェック
-function canEditPost(post) {
-    return currentUser && post.userId === currentUser.uid;
-}
+            if (!validateContent(content)) return;
 
-// 投稿のHTML要素を生成
-function createPostElement(post) {
-    // 編集権限を確認
-    const canEdit = canEditPost(post);
-    // 編集権限があれば、編集・削除機能を表示
-    const actions = canEdit ? `
+            const button = $('#postButton');
+            button.prop('disabled', true);
+
+            // author はログインしているユーザのメールアドレスに変更、userId を追加
+            const postData = {
+                author: currentUser.email,
+                content: content,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                userId: currentUser.uid
+            };
+
+            postsRef.push(postData)
+                .then(() => {
+                    showMessage('投稿が完了しました！');
+                    $('#contentInput').val('');
+                    updateCharacterCount('contentInput', 'contentCount', 1000);
+                })
+                .catch((error) => {
+                    showMessage('投稿に失敗しました：' + error.message, 'error');
+                })
+                .finally(() => {
+                    button.prop('disabled', false);
+                });
+        }
+
+        // HTMLエスケープ処理
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // タイムスタンプのフォーマット（相対時間表示対応）
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSeconds = Math.floor(diffMs / 1000);
+            const diffMinutes = Math.floor(diffSeconds / 60);
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            const diffWeeks = Math.floor(diffDays / 7);
+            const diffMonths = Math.floor(diffDays / 30);
+            const diffYears = Math.floor(diffDays / 365);
+
+            // 相対時間の表示
+            let relativeTime;
+            if (diffSeconds < 60) {
+                relativeTime = 'たった今';
+            } else if (diffMinutes < 60) {
+                relativeTime = `${diffMinutes}分前`;
+            } else if (diffHours < 24) {
+                relativeTime = `${diffHours}時間前`;
+            } else if (diffDays < 7) {
+                relativeTime = `${diffDays}日前`;
+            } else if (diffWeeks < 4) {
+                relativeTime = `${diffWeeks}週間前`;
+            } else if (diffMonths < 12) {
+                relativeTime = `${diffMonths}ヶ月前`;
+            } else {
+                relativeTime = `${diffYears}年前`;
+            }
+
+            // 詳細な日時（ツールチップ用）
+            const fullDate = date.toLocaleString('ja-JP', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return { relativeTime, fullDate };
+        }
+
+        // 投稿の編集権限チェック
+        function canEditPost(post) {
+            return currentUser && post.userId === currentUser.uid;
+        }
+
+        // 投稿のHTML要素を生成
+        function createPostElement(post) {
+            // 編集権限を確認
+            const canEdit = canEditPost(post);
+            // 編集権限があれば、編集・削除機能を表示
+            const actions = canEdit ? `
         <div class="post-actions">
             <button class="btn-edit" onclick="startEdit('${post.id}')">
                 編集
@@ -175,7 +218,7 @@ function createPostElement(post) {
         </div>
     ` : '';
 
-    return `
+            return `
         <div class="post" id="post-${post.id}">
             <div class="post-header">
                 <span class="post-author">${escapeHtml(post.author)}</span>
@@ -184,317 +227,365 @@ function createPostElement(post) {
             </div>
             <div class="post-content">${escapeHtml(post.content)}</div>
             <div class="post-footer">
-                <span class="post-time">
-                    ${formatTimestamp(post.timestamp)}
+                <span class="post-time" title="${formatTimestamp(post.timestamp).fullDate}">
+                    ${formatTimestamp(post.timestamp).relativeTime}
                 </span>
                 ${post.updatedAt ? `
-                    <span class="post-updated">
-                        (編集済み: ${formatTimestamp(post.updatedAt)})
+                    <span class="post-updated" title="${formatTimestamp(post.updatedAt).fullDate}">
+                        (編集済み: ${formatTimestamp(post.updatedAt).relativeTime})
                     </span>
                 ` : ''}
             </div>
         </div>
     `;
-}
+        }
 
-// 投稿リストを表示
-function displayPosts(posts) {
-    const postsList = $('#postsList');
-    postsList.empty();
+        // 投稿リストを表示
+        function displayPosts(posts) {
+            const postsList = $('#postsList');
+            postsList.empty();
 
-    if (posts.length === 0) {
-        postsList.html('<div class="no-posts">投稿はありません</div>');
-        return;
-    }
+            if (posts.length === 0) {
+                postsList.html('<div class="no-posts">投稿はありません</div>');
+                return;
+            }
 
-    posts.forEach(post => {
-        postsList.append(createPostElement(post));
-    });
-}
+            posts.forEach(post => {
+                postsList.append(createPostElement(post));
+            });
+        }
 
-// 投稿の読み込み
-function loadPosts() {
-    const sortOrder = $('#sortOrder').val();
-    $('#loadingSpinner').show();
+        // 投稿の読み込み
+        function loadPosts() {
+            const sortOrder = $('#sortOrder').val();
+            $('#loadingSpinner').show();
 
-    // 既存のリスナーを解除
-    if (postsListener) {
-        postsRef.off('value', postsListener);
-        postsListener = null;
-    }
+            // 既存のリスナーを解除
+            if (postsListener) {
+                postsRef.off('value', postsListener);
+                postsListener = null;
+            }
 
-    // リスナーを設定
-    postsListener = postsRef.on('value', (snapshot) => {
-        const posts = [];
-        snapshot.forEach((childSnapshot) => {
-            posts.push({
-                id: childSnapshot.key,
-                ...childSnapshot.val()
+            // リスナーを設定
+            postsListener = postsRef.on('value', (snapshot) => {
+                const posts = [];
+                snapshot.forEach((childSnapshot) => {
+                    posts.push({
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    });
+                });
+
+                // ソート順の適用
+                if (sortOrder === 'newest') {
+                    posts.sort((a, b) => b.timestamp - a.timestamp);
+                } else {
+                    posts.sort((a, b) => a.timestamp - b.timestamp);
+                }
+
+                displayPosts(posts);
+                $('#loadingSpinner').hide();
+            }, (error) => {
+                console.error('Data fetch error:', error);
+                showMessage('データの読み込みに失敗しました', 'error');
+                $('#loadingSpinner').hide();
+            });
+        }
+
+        // モーダル関連の関数
+        function showModal(modalId) {
+            $(`#${modalId}`).fadeIn(200);
+            $('body').addClass('modal-open');
+        }
+
+        function closeModal(modalId) {
+            $(`#${modalId}`).fadeOut(200);
+            $('body').removeClass('modal-open');
+        }
+
+        // 更新処理のハンドラ
+        function handleUpdate() {
+            if (!currentEditId) return;
+
+            const content = $('#editContent').val();
+            if (!validateContent(content)) return;
+
+            const updates = {
+                content: content,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            };
+
+            postsRef.child(currentEditId).update(updates)
+                .then(() => {
+                    showMessage('投稿を更新しました');
+                    closeModal('editModal');
+                    animateUpdate(currentEditId);
+                    currentEditId = null;
+                })
+                .catch((error) => {
+                    showMessage('更新に失敗しました：' + error.message, 'error');
+                });
+        }
+
+        // 削除処理のハンドラ
+        function handleDelete() {
+            if (!currentEditId) return;
+
+            const postElement = $(`#post-${currentEditId}`);
+            postElement.addClass('deleting');
+
+            postsRef.child(currentEditId).remove()
+                .then(() => {
+                    showMessage('投稿を削除しました');
+                    closeModal('deleteModal');
+                    currentEditId = null;
+                })
+                .catch((error) => {
+                    showMessage('削除に失敗しました：' + error.message, 'error');
+                    postElement.removeClass('deleting');
+                });
+        }
+
+        // モーダルの外側をクリックした時の処理
+        $(document).on('click', '.modal-overlay', () => {
+            const modalId = $(this).parent().attr('id');
+            closeModal(modalId);
+        });
+
+        // ESCキーでモーダルを閉じる
+        $(document).on('keydown', (e) => {
+            if (e.key === 'Escape') {
+                $('.modal:visible').each(() => {
+                    closeModal(this.id);
+                });
+            }
+        });
+
+        // 編集の開始
+        function startEdit(postId) {
+            currentEditId = postId;
+            const post = $(`#post-${postId}`);
+            const content = post.find('.post-content').text();
+
+            $('#editContent').val(content);
+            updateCharacterCount('editContent', 'editContentCount', 1000);
+            showModal('editModal');
+        }
+
+        // 削除の開始
+        function startDelete(postId) {
+            currentEditId = postId;
+            showModal('deleteModal');
+        }
+
+
+        // 投稿の削除
+        function deletePost(postId) {
+            if (!confirm('この投稿を削除してもよろしいですか？')) {
+                return;
+            }
+
+            const postElement = $(`#post-${postId}`);
+            postElement.addClass('deleting');
+
+            postsRef.child(postId).remove()
+                .then(() => {
+                    showMessage('投稿を削除しました');
+                })
+                .catch((error) => {
+                    showMessage('削除に失敗しました：' + error.message, 'error');
+                    postElement.removeClass('deleting');
+                });
+        }
+
+        // 更新時のアニメーション
+        function animateUpdate(postId) {
+            const post = $(`#post-${postId}`);
+            post.addClass('updated');
+            setTimeout(() => {
+                post.removeClass('updated');
+            }, 1000);
+        }
+
+        // ログイン処理
+        function login(email, password) {
+            if (!validateAuthInput(email, password)) return;
+
+            const button = $('#loginButton');
+            button.prop('disabled', true);
+
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    showMessage('ログインしました');
+                    clearAuthForm();
+                })
+                .catch((error) => {
+                    showMessage(getAuthErrorMessage(error), 'error');
+                })
+                .finally(() => {
+                    button.prop('disabled', false);
+                });
+        }
+
+        // 新規登録処理
+        function register(email, password) {
+            if (!validateAuthInput(email, password, true)) return;
+
+            const button = $('#registerButton');
+            button.prop('disabled', true);
+
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then(() => {
+                    showMessage('アカウントを作成しました');
+                    clearAuthForm();
+                })
+                .catch((error) => {
+                    showMessage(getAuthErrorMessage(error), 'error');
+                })
+                .finally(() => {
+                    button.prop('disabled', false);
+                });
+        }
+
+        // ログアウト処理
+        function logout() {
+            firebase.auth().signOut()
+                .then(() => {
+                    showMessage('ログアウトしました');
+                })
+                .catch((error) => {
+                    showMessage('ログアウトに失敗しました', 'error');
+                });
+        }
+
+        // 認証フォームのクリア
+        function clearAuthForm() {
+            $('#loginEmail').val('');
+            $('#loginPassword').val('');
+        }
+
+        // UI更新
+        function updateUI(user) {
+            if (user) {
+                $('.logged-in').show();
+                $('.logged-out').hide();
+                $('#userEmail').text(user.email);
+            } else {
+                $('.logged-in').hide();
+                $('.logged-out').show();
+                $('#userEmail').text('');
+            }
+        }
+
+        $(function () {
+            // Firebaseの初期化
+            try {
+                firebase.initializeApp(firebaseConfig);
+                console.log("Firebase initialized successfully");
+                postsRef = firebase.database().ref('posts');
+
+                // 投稿データの読み込み
+                loadPosts();
+
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+                showMessage('Firebaseの初期化に失敗しました', 'error');
+            }
+
+            // 認証状態の監視
+            firebase.auth().onAuthStateChanged((user) => {
+                currentUser = user;
+                updateUI(user);
+                loadPosts();
+            });
+
+            // 文字数カウンターの初期化
+            updateCharacterCount('contentInput', 'contentCount', 1000);
+
+            // 投稿処理
+            $('#postButton').on('click', () => {
+                // 投稿内容をフォームから取得
+                const authorVal = $('#authorInput').val();
+                const contentVal = $('#contentInput').val();
+                createPost(authorVal, contentVal);
+            });
+
+            $('#loginButton').on('click', () => {
+                const email = $('#loginEmail').val();
+                const password = $('#loginPassword').val();
+                login(email, password);
+            });
+
+            $('#registerButton').on('click', () => {
+                const email = $('#loginEmail').val();
+                const password = $('#loginPassword').val();
+                register(email, password);
+            });
+
+            $('#logoutButton').on('click', logout);
+
+            // 投稿一覧表示順序選択
+            $('#sortOrder').on('change', loadPosts);
+
+            // 背景色変更機能
+            const themes = [
+                { name: 'default', bg: '#f8f9fa', text: '#333', card: '#ffffff' },
+                { name: 'dark', bg: '#1a1a2e', text: '#eaeaea', card: '#16213e' },
+                { name: 'ocean', bg: '#e3f2fd', text: '#1565c0', card: '#ffffff' },
+                { name: 'forest', bg: '#e8f5e9', text: '#2e7d32', card: '#ffffff' },
+                { name: 'sunset', bg: '#fff3e0', text: '#e65100', card: '#ffffff' }
+            ];
+            let currentThemeIndex = parseInt(localStorage.getItem('themeIndex') || '0');
+
+            function applyTheme(index) {
+                const theme = themes[index];
+                document.body.style.backgroundColor = theme.bg;
+                document.body.style.color = theme.text;
+
+                // カード背景を更新
+                document.querySelectorAll('.post, .auth-container, .post-form, .user-info, .modal-content').forEach(el => {
+                    el.style.backgroundColor = theme.card;
+                });
+
+                // ダークテーマの場合は追加スタイル
+                if (theme.name === 'dark') {
+                    document.body.classList.add('dark-theme');
+                } else {
+                    document.body.classList.remove('dark-theme');
+                }
+
+                localStorage.setItem('themeIndex', index);
+            }
+
+            // 初期テーマを適用
+            applyTheme(currentThemeIndex);
+
+            // テーマ切り替えボタン
+            $('#themeToggleBtn').on('click', () => {
+                currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+                applyTheme(currentThemeIndex);
+                showMessage(`テーマを「${themes[currentThemeIndex].name}」に変更しました`, 'success');
             });
         });
 
-            // ソート順の適用
-            if (sortOrder === 'newest') {
-                posts.sort((a, b) => b.timestamp - a.timestamp);
-            } else {
-                posts.sort((a, b) => a.timestamp - b.timestamp);
+        // クリーンアップ処理
+        window.addEventListener('unload', () => {
+            if (postsListener) {
+                postsRef.off('value', postsListener);
+                postsListener = null;
             }
-
-        displayPosts(posts);
-        $('#loadingSpinner').hide();
-    }, (error) => {
-        console.error('Data fetch error:', error);
-        showMessage('データの読み込みに失敗しました', 'error');
-        $('#loadingSpinner').hide();
-    });
-}
-
-// モーダル関連の関数
-function showModal(modalId) {
-    $(`#${modalId}`).fadeIn(200);
-    $('body').addClass('modal-open');
-}
-
-function closeModal(modalId) {
-    $(`#${modalId}`).fadeOut(200);
-    $('body').removeClass('modal-open');
-}
-
-// 更新処理のハンドラ
-function handleUpdate() {
-    if (!currentEditId) return;
-
-    const content = $('#editContent').val();
-    if (!validateContent(content)) return;
-
-    const updates = {
-        content: content,
-        updatedAt: firebase.database.ServerValue.TIMESTAMP
-    };
-
-    postsRef.child(currentEditId).update(updates)
-    .then(() => {
-        showMessage('投稿を更新しました');
-        closeModal('editModal');
-        animateUpdate(currentEditId);
-        currentEditId = null;
-    })
-    .catch((error) => {
-        showMessage('更新に失敗しました：' + error.message, 'error');
-    });
-}
-
-// 削除処理のハンドラ
-function handleDelete() {
-    if (!currentEditId) return;
-
-    const postElement = $(`#post-${currentEditId}`);
-    postElement.addClass('deleting');
-
-    postsRef.child(currentEditId).remove()
-    .then(() => {
-        showMessage('投稿を削除しました');
-        closeModal('deleteModal');
-        currentEditId = null;
-    })
-    .catch((error) => {
-        showMessage('削除に失敗しました：' + error.message, 'error');
-        postElement.removeClass('deleting');
-    });
-}
-
-// モーダルの外側をクリックした時の処理
-$(document).on('click', '.modal-overlay', () => {
-    const modalId = $(this).parent().attr('id');
-    closeModal(modalId);
-});
-
-// ESCキーでモーダルを閉じる
-$(document).on('keydown', (e) => {
-    if (e.key === 'Escape') {
-        $('.modal:visible').each(() => {
-            closeModal(this.id);
         });
-    }
-});
-
-// 編集の開始
-function startEdit(postId) {
-    currentEditId = postId;
-    const post = $(`#post-${postId}`);
-    const content = post.find('.post-content').text();
-
-    $('#editContent').val(content);
-    updateCharacterCount('editContent', 'editContentCount', 1000);
-    showModal('editModal');
-}
-
-// 削除の開始
-function startDelete(postId) {
-    currentEditId = postId;
-    showModal('deleteModal');
-}
-
-
-// 投稿の削除
-function deletePost(postId) {
-    if (!confirm('この投稿を削除してもよろしいですか？')) {
-        return;
-    }
-
-    const postElement = $(`#post-${postId}`);
-    postElement.addClass('deleting');
-
-    postsRef.child(postId).remove()
-    .then(() => {
-        showMessage('投稿を削除しました');
-    })
-    .catch((error) => {
-        showMessage('削除に失敗しました：' + error.message, 'error');
-        postElement.removeClass('deleting');
-    });
-}
-
-// 更新時のアニメーション
-function animateUpdate(postId) {
-    const post = $(`#post-${postId}`);
-    post.addClass('updated');
-    setTimeout(() => {
-        post.removeClass('updated');
-    }, 1000);
-}
-
-// ログイン処理
-function login(email, password) {
-    if (!validateAuthInput(email, password)) return;
-
-    const button = $('#loginButton');
-    button.prop('disabled', true);
-
-    firebase.auth().signInWithEmailAndPassword(email, password)
-    .then(() => {
-        showMessage('ログインしました');
-        clearAuthForm();
-    })
-    .catch((error) => {
-        showMessage(getAuthErrorMessage(error), 'error');
-    })
-    .finally(() => {
-        button.prop('disabled', false);
-    });
-}
-
-// 新規登録処理
-function register(email, password) {
-    if (!validateAuthInput(email, password, true)) return;
-
-    const button = $('#registerButton');
-    button.prop('disabled', true);
-
-    firebase.auth().createUserWithEmailAndPassword(email, password)
-    .then(() => {
-        showMessage('アカウントを作成しました');
-        clearAuthForm();
-    })
-    .catch((error) => {
-        showMessage(getAuthErrorMessage(error), 'error');
-    })
-    .finally(() => {
-        button.prop('disabled', false);
-    });
-}
-
-// ログアウト処理
-function logout() {
-    firebase.auth().signOut()
-        .then(() => {
-            showMessage('ログアウトしました');
-        })
-        .catch((error) => {
-            showMessage('ログアウトに失敗しました', 'error');
-        });
-}
-
-// 認証フォームのクリア
-function clearAuthForm() {
-    $('#loginEmail').val('');
-    $('#loginPassword').val('');
-}
-
-// UI更新
-function updateUI(user) {
-    if (user) {
-        $('.logged-in').show();
-        $('.logged-out').hide();
-        $('#userEmail').text(user.email);
-    } else {
-        $('.logged-in').hide();
-        $('.logged-out').show();
-        $('#userEmail').text('');
-    }
-}
-
-$(function() {
-    // Firebaseの初期化
-    try {
-        firebase.initializeApp(firebaseConfig);
-        console.log("Firebase initialized successfully");
-        postsRef = firebase.database().ref('posts');
-
-        // 投稿データの読み込み
-        loadPosts();
-
-    } catch (error) {
-        console.error("Firebase initialization error:", error);
-        showMessage('Firebaseの初期化に失敗しました', 'error');
-    }
-
-    // 認証状態の監視
-    firebase.auth().onAuthStateChanged((user) => {
-        currentUser = user;
-        updateUI(user);
-        loadPosts();
-     });
-
-    // 文字数カウンターの初期化
-    updateCharacterCount('contentInput', 'contentCount', 1000);
-
-    // 投稿処理
-    $('#postButton').on('click', () => {
-        // 投稿内容をフォームから取得
-        const authorVal = $('#authorInput').val();
-        const contentVal = $('#contentInput').val();
-        createPost(authorVal, contentVal);
-    });
-
-    $('#loginButton').on('click', () => {
-        const email = $('#loginEmail').val();
-        const password = $('#loginPassword').val();
-        login(email, password);
-    });
-
-    $('#registerButton').on('click', () => {
-        const email = $('#loginEmail').val();
-        const password = $('#loginPassword').val();
-        register(email, password);
-    });
-
-    $('#logoutButton').on('click', logout);
-
-    // 投稿一覧表示順序選択
-    $('#sortOrder').on('change', loadPosts);
-});
-
-// クリーンアップ処理
-window.addEventListener('unload', () => {
-    if (postsListener) {
-        postsRef.off('value', postsListener);
-        postsListener = null;
-    }
-});
     </script>
 </head>
+
 <body>
+    <!-- 背景色変更ボタン（固定位置） -->
+    <div class="theme-toggle-container">
+        <button id="themeToggleBtn" class="btn-theme-toggle" title="背景色を変更">
+            🎨
+        </button>
+    </div>
+
     <div class="container">
         <h1>掲示板アプリ</h1>
 
@@ -505,13 +596,11 @@ window.addEventListener('unload', () => {
         <div class="auth-container logged-out">
             <div class="form-group">
                 <label for="loginEmail">メールアドレス</label>
-                <input type="email" id="loginEmail"
-                       class="form-control" placeholder="example@example.com">
+                <input type="email" id="loginEmail" class="form-control" placeholder="example@example.com">
             </div>
             <div class="form-group">
                 <label for="loginPassword">パスワード</label>
-                <input type="password" id="loginPassword"
-                       class="form-control" placeholder="6文字以上">
+                <input type="password" id="loginPassword" class="form-control" placeholder="6文字以上">
                 <small class="help-text">※新規登録時は6文字以上</small>
             </div>
             <div class="button-group">
@@ -530,8 +619,7 @@ window.addEventListener('unload', () => {
         <div class="post-form logged-in">
             <div class="form-group">
                 <label for="contentInput">投稿内容</label>
-                <textarea id="contentInput" class="form-control"
-                          placeholder="投稿内容を入力してください"></textarea>
+                <textarea id="contentInput" class="form-control" placeholder="投稿内容を入力してください"></textarea>
                 <small class="character-count" id="contentCount">0/1000</small>
             </div>
             <div class="button-group">
@@ -552,8 +640,8 @@ window.addEventListener('unload', () => {
                 <div class="loading">投稿を読み込み中...</div>
             </div>
         </div>
-            </div>
-        </div>
+    </div>
+    </div>
     </div>
 
     <!-- 編集モーダルウィンドウ -->
@@ -596,4 +684,5 @@ window.addEventListener('unload', () => {
         </div>
     </div>
 </body>
+
 </html>

@@ -90,10 +90,17 @@ textarea.form-control {
     bottom: -20px;
     color: #6c757d;
     font-size: 12px;
+    transition: color 0.2s ease;
+}
+
+.character-count.warning {
+    color: #ffc107;
+    font-weight: 500;
 }
 
 .character-count.error {
     color: #dc3545;
+    font-weight: 600;
 }
 
 /* ボタン */
@@ -506,4 +513,134 @@ textarea.form-control {
 
 .logged-out {
     display: none;
+}
+
+/* テーマ切り替えボタン */
+.theme-toggle-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+}
+
+.btn-theme-toggle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-theme-toggle:hover {
+    transform: scale(1.1) rotate(15deg);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.btn-theme-toggle:active {
+    transform: scale(0.95);
+}
+
+/* 投稿日時ホバースタイル */
+.post-time {
+    margin-right: 10px;
+    cursor: help;
+    border-bottom: 1px dotted #999;
+}
+
+.post-time:hover {
+    color: #007bff;
+}
+
+.post-updated {
+    color: #666;
+    font-size: 0.9em;
+    cursor: help;
+}
+
+/* ダークテーマ */
+.dark-theme {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark-theme .form-control {
+    background-color: #1e3a5f;
+    border-color: #2a4a6f;
+    color: #eaeaea;
+}
+
+.dark-theme .form-control:focus {
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 0.2rem rgba(74, 144, 217, 0.25);
+}
+
+.dark-theme .form-control::placeholder {
+    color: #8a9aaa;
+}
+
+.dark-theme h1, 
+.dark-theme h2 {
+    color: #eaeaea;
+}
+
+.dark-theme .post-author {
+    color: #87ceeb;
+}
+
+.dark-theme .post-content {
+    color: #d0d0d0;
+}
+
+.dark-theme .post-time,
+.dark-theme .post-updated {
+    color: #8a9aaa;
+}
+
+.dark-theme .btn-secondary {
+    background-color: #4a5568;
+}
+
+.dark-theme .btn-secondary:hover {
+    background-color: #5a6578;
+}
+
+.dark-theme .modal-content {
+    background-color: #16213e !important;
+    color: #eaeaea;
+}
+
+.dark-theme .modal-header,
+.dark-theme .modal-footer {
+    border-color: #2a4a6f;
+}
+
+.dark-theme .character-count {
+    color: #8a9aaa;
+}
+
+.dark-theme .character-count.warning {
+    color: #ffc107;
+}
+
+.dark-theme .character-count.error {
+    color: #ff6b6b;
+}
+
+.dark-theme .message.success {
+    background-color: #1e5631;
+    color: #a5d6a7;
+    border-color: #2e7d32;
+}
+
+.dark-theme .message.error {
+    background-color: #5c1e1e;
+    color: #ef9a9a;
+    border-color: #c62828;
 }
